@@ -14,7 +14,6 @@ use MikoPBX\Core\System\Util;
 use Modules\ModuleHttpAlert\Models\ModuleDidUrl;
 use Modules\ModuleHttpAlert\Models\ModuleHttpAlert;
 use Modules\ModuleHttpAlert\bin\WorkerHTTP;
-use Modules\ModuleHttpAlert\Lib\Logger;
 
 require_once 'Globals.php';
 
@@ -39,9 +38,9 @@ $params = [
 ];
 
 $baseUrl = '';
-$baseData = ModuleDidUrl::findFirst("did='{$params['did']}'");
+$baseData = ModuleDidUrl::findFirst(['conditions' => 'did = :did:', 'bind' => ['did' => $params['did']]]);
 if (!$baseData) {
-    $baseData = ModuleDidUrl::findFirst("did=''");
+    $baseData = ModuleDidUrl::findFirst(['conditions' => 'did = :did:', 'bind' => ['did' => '']]);;
 }
 if ($baseData) {
     $baseUrl = $baseData->url;
@@ -52,32 +51,16 @@ $settings = ModuleHttpAlert::findFirst();
 if ($settings && !empty($baseUrl)) {
     $agi->verbose($baseUrl . '?' . $settings->urlStartCall);
     
-    try {
-        $result = WorkerHTTP::invoke('httpGet', [$baseUrl . '?' . $settings->urlStartCall, $params]);
-        
-        // Проверка результата
-        if (!($result instanceof \MikoPBX\PBXCoreREST\Lib\PBXApiResult)) {
-            throw new \Exception('Invalid response type from WorkerHTTP::invoke');
-        }
-        
-        if (!$result->success) {
-            $errorMessage = $result->messages[0]['message'] ?? 'Unknown error';
-            throw new \Exception("HTTP request failed: {$errorMessage}");
-        }
-        
+    $result = WorkerHTTP::invoke('httpGet', [$baseUrl . '?' . $settings->urlStartCall, $params]);
+    if (!$result->success) {
+        $errorMessage = $result->messages[0]['message'] ?? 'Unknown error';
+        Util::sysLogMsg('ModuleHttpAlert-AGI', "HTTP request failed: {$errorMessage}");
+        $agi->verbose("HTTP error: {$errorMessage}");
+    } else {
         [$code, $cidName] = $result->data;
-        
-        if ($result->success) {
-            $cidName = preg_replace('/[^a-zA-Z0-9]/', '', $cidName);
-            if (!empty($cidName)) {
-                $agi->set_variable('CALLERID(name)', substr($cidName, 0, 40));
-            }
-        } else {
-            $agi->verbose("HTTP error code: {$code}");
+        $cidName = preg_replace('/[^a-zA-Z0-9\s]/', '', $cidName);
+        if (!empty($cidName)) {
+            $agi->set_variable('CALLERID(name)', substr($cidName, 0, 40));
         }
-    } catch (\Throwable $e) {
-        // Логирование ошибки в системный лог
-        Util::sysLogMsg('ModuleHttpAlert-AGI', 'HTTP request error: ' . $e->getMessage());
-        $agi->verbose("Error: " . $e->getMessage());
     }
 }

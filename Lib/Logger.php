@@ -85,9 +85,7 @@ class Logger
     public function writeWarning($data): void
     {
         $this->rotate();
-        if ($this->debug) {
-            $this->logger->warning($this->getDecodedString($data));
-        }
+        $this->logger->warning($this->getDecodedString($data));
     }
 
     public function writeInfo($data): void

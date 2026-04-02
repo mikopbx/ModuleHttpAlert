@@ -52,7 +52,9 @@ class WorkerHTTP extends WorkerBase
      */
     public function signalHandler(int $signal): void
     {
-        $this->logger->writeInfo("Received signal {$signal}, shutting down...");
+        if (isset($this->logger)) {
+            $this->logger->writeInfo("Received signal {$signal}, shutting down...");
+        }
         parent::signalHandler($signal);
         cli_set_process_title('SHUTDOWN_' . cli_get_process_title());
     }
@@ -100,11 +102,6 @@ class WorkerHTTP extends WorkerBase
         // Проверка белого списка методов
         if (!in_array($funcName, self::ALLOWED_METHODS, true)) {
             $this->logger->writeError("Method not allowed: {$funcName}");
-            return;
-        }
-
-        if (!method_exists($this, $funcName)) {
-            $this->logger->writeError("Method does not exist: {$funcName}");
             return;
         }
 
@@ -165,16 +162,11 @@ class WorkerHTTP extends WorkerBase
             $url = str_replace("<{$key}>", rawurlencode((string) $value), $url);
         }
 
-        // Финальная санитизация URL
-        $url = filter_var($url, FILTER_SANITIZE_URL);
-
         // Валидация финального URL
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             $this->logger->writeError("Invalid final URL: {$url}");
             return new PBXApiResult();
         }
-
-        $this->logger->writeInfo("Sending HTTP GET: {$url}");
         return ClientHTTP::sendHttpGetRequest($url, []);
     }
 

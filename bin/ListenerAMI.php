@@ -757,14 +757,7 @@ class ListenerAMI extends WorkerBase
         
         if (!empty($baseUrl) && !empty($url)) {
             $this->logger->writeInfo(["SEND: $did ", $url, $params]);
-            
-            try {
-                // Вызов без возврата результата (fire-and-forget)
-                WorkerHTTP::invoke('httpGet', [$baseUrl . '?' . $url, $params], false);
-            } catch (\Throwable $e) {
-                // Логирование ошибки отправки
-                $this->logger->writeError("Failed to send HTTP request: " . $e->getMessage());
-            }
+            WorkerHTTP::invoke('httpGet', [$baseUrl . '?' . $url, $params], false);
         } else {
             $this->logger->writeInfo(["SKIP: $did ", $url, $params]);
         }
