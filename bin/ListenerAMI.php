@@ -746,18 +746,27 @@ class ListenerAMI extends WorkerBase
     }
 
     /**
-     * Выполнение меодов worker, запущенного в другом процессе.
+     * Выполнение методов worker, запущенного в другом процессе.
      * @param string $url
      * @param array $params
      */
-    private function send(string $url, array $params = []):void{
-        $did = $params['did']??'';
-        $baseUrl = trim($this->didData[$did]??$this->didData['']??"");
-        if(!empty($baseUrl) && !empty($url)){
-            $this->logger->writeInfo(["SEND: $did ",$url, $params]);
-            WorkerHTTP::invoke('httpGet', [$baseUrl.'?'.$url, $params], false);
-        }else{
-            $this->logger->writeInfo(["SKEEP: $did ",$url, $params]);
+    private function send(string $url, array $params = []):void
+    {
+        $did = $params['did'] ?? '';
+        $baseUrl = trim($this->didData[$did] ?? $this->didData[''] ?? '');
+        
+        if (!empty($baseUrl) && !empty($url)) {
+            $this->logger->writeInfo(["SEND: $did ", $url, $params]);
+            
+            try {
+                // Вызов без возврата результата (fire-and-forget)
+                WorkerHTTP::invoke('httpGet', [$baseUrl . '?' . $url, $params], false);
+            } catch (\Throwable $e) {
+                // Логирование ошибки отправки
+                $this->logger->writeError("Failed to send HTTP request: " . $e->getMessage());
+            }
+        } else {
+            $this->logger->writeInfo(["SKIP: $did ", $url, $params]);
         }
     }
 }
