@@ -1,0 +1,7 @@
+{
+  "developer":"MIKO",
+  "moduleUniqueID":"ModuleHttpAlert",
+  "support_email": "help@miko.ru",
+  "version": "1.1",
+  "min_pbx_version": "2023.2.150"
+}
