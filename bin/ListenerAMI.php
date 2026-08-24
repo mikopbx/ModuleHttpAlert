@@ -23,6 +23,7 @@ require_once 'Globals.php';
 use MikoPBX\Common\Models\Extensions;
 use MikoPBX\Core\System\Util;
 use MikoPBX\Core\Workers\WorkerBase;
+use Modules\ModuleHttpAlert\Lib\CdrEventDecoder;
 use Modules\ModuleHttpAlert\Lib\Logger;
 use Modules\ModuleHttpAlert\Models\ModuleDidUrl;
 use Modules\ModuleHttpAlert\Models\ModuleHttpAlert;
@@ -197,11 +198,7 @@ class ListenerAMI extends WorkerBase
             return;
         }
         $this->checkUpdateSettings();
-        try {
-            $data = json_decode(base64_decode($parameters['AgiData']), true, 512, JSON_THROW_ON_ERROR);
-        }catch (\JsonException $e){
-            $data['action'] = '';
-        }
+        $data = CdrEventDecoder::decode((string)($parameters['AgiData'] ?? '')) ?? ['action' => ''];
         switch ($data['action']) {
             case 'hangup_chan':
                 $this->actionHangupChan($data);
